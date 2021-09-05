@@ -34,14 +34,17 @@ class Tank(base_class.BaseSprite):
         return new_projectile
 
     def move(self):
+        print('moving')
+        self.x = self.x + self.move_sides[self.current_side][0]
+        self.y = self.y + self.move_sides[self.current_side][1]
         if self.current_side == 'left':
             self.x = max(self.x, 0)
         elif self.current_side == 'right':
-            self.x = min(self.x, 0)
+            self.x = min(self.x, constans.MAP_WIDTH*constans.SIDE_OF_BOX - self.width)
         elif self.current_side == 'up':
-            self.y = min(self.y, 0)
-        elif self.current_side == 'down':
             self.y = max(self.y, 0)
+        elif self.current_side == 'down':
+            self.y = min(self.y, constans.MAP_HEIGHT*constans.SIDE_OF_BOX - self.height)
 
     # States - information about neighbour boxes
     def analyse(self, neighbour_states: list):
