@@ -3,7 +3,6 @@ import tank
 
 
 class Spawn:
-    isActive = True
     x = 0
     y = 0
     spawn_timer = 0

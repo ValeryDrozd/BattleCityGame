@@ -3,7 +3,6 @@ import constans
 
 class BaseSprite:
     textures = {'left': '', 'right': '', 'up': '', 'down': ''}
-    opposite = {'left': 'right', 'right': 'left', 'up': 'down', 'down': 'up'}
     sides = ['left', 'right', 'up', 'down']
     x: int = 0
     y: int = 0

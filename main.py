@@ -263,11 +263,11 @@ draw_game()
 while isActive:
     if winner == 1:
         checkWin()
-        isActive = False
+        pygame.time.delay(3000)
         break
     elif winner == -1:
         checkLose()
-        isActive = False
+        pygame.time.delay(3000)
         break
     pygame.time.delay(constans.UPDATE_TIME)
     get_destroyable()
@@ -310,5 +310,5 @@ while isActive:
     draw_game()
     pg.display.update()
 
-sleep(5)
+
 pygame.quit()

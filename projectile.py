@@ -9,7 +9,7 @@ class Projectile(base_class.BaseSprite):
         self.height = constans.BULLET_HEIGHT
         self.width = constans.BULLET_WIDTH
         self.in_move = True
-        self.speed = 5
+        self.speed = 2
         self.owner = 0
         if textures is None:
             self.textures = {'left': texturesfile.BULLET_LEFT, 'right': texturesfile.BULLET_RIGHT,
