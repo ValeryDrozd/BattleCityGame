@@ -18,4 +18,4 @@ class Spawn:
         self.height = height
 
     def getTank(self):
-        return tank.Tank(owner=constans.COMPUTER_TANK, x=self.x, y=self.y * constans.SIDE_OF_BOX)
+        return tank.Tank(owner=constans.COMPUTER_TANK, x=self.x, y=self.y)

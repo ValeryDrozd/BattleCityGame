@@ -14,6 +14,8 @@ class Tank(base_class.BaseSprite):
         self.width = constans.TANK_WIDTH
         self.speed = 1
         self.owner = owner
+        if owner == constans.PLAYER_TANK:
+            self.reload_time = 100
         if owner == constans.COMPUTER_TANK:
             self.textures = {'left': texturesfile.ENEMY_TANK_LEFT, 'right': texturesfile.ENEMY_TANK_RIGHT,
                              'up': texturesfile.ENEMY_TANK_UP, 'down': texturesfile.ENEMY_TANK_DOWN}
@@ -26,17 +28,17 @@ class Tank(base_class.BaseSprite):
         new_projectile.current_side = self.current_side
         new_projectile.owner = self.owner
         if self.current_side == 'left':
-            new_projectile.y = self.y + self.height//2 - constans.BULLET_HEIGHT//2
+            new_projectile.y = self.y + self.height // 2 - constans.BULLET_HEIGHT // 2
             new_projectile.x = max(self.x - constans.BULLET_WIDTH, 0)
         elif self.current_side == 'right':
-            new_projectile.y = self.y + self.height//2 - constans.BULLET_HEIGHT//2
-            new_projectile.x = min(self.x + self.width, constans.MAP_WIDTH*constans.SIDE_OF_BOX)
+            new_projectile.y = self.y + self.height // 2 - constans.BULLET_HEIGHT // 2
+            new_projectile.x = min(self.x + self.width, constans.MAP_WIDTH * constans.SIDE_OF_BOX)
         elif self.current_side == 'up':
             new_projectile.y = max(self.y - constans.BULLET_WIDTH, 0)
-            new_projectile.x = self.x + self.width//2 - constans.BULLET_HEIGHT//2
+            new_projectile.x = self.x + self.width // 2 - constans.BULLET_HEIGHT // 2
         else:
-            new_projectile.y = min(self.y + constans.TANK_HEIGHT, constans.MAP_HEIGHT*constans.SIDE_OF_BOX)
-            new_projectile.x = self.x + self.width//2 - constans.BULLET_HEIGHT//2
+            new_projectile.y = min(self.y + constans.TANK_HEIGHT, constans.MAP_HEIGHT * constans.SIDE_OF_BOX)
+            new_projectile.x = self.x + self.width // 2 - constans.BULLET_HEIGHT // 2
         return new_projectile
 
     # States - information about neighbour boxes

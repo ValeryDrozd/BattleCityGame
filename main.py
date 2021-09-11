@@ -1,14 +1,26 @@
 import random
+import time
 from time import sleep
 
 import pygame as pg
 import pygame.time
+
+import generation_maze
 import projectile
-import readmap
 import constans
 import tank
 import texturesfile
 import spawn
+from bfs import bfs
+from dfs import dfs
+from ucs import ucs
+
+
+def track_time(lam):
+    start = time.time()
+    output = lam()
+    return output, time.time() - start
+
 
 pg.init()
 win = pg.display.set_mode(
@@ -16,11 +28,31 @@ win = pg.display.set_mode(
 
 isActive: bool = True
 timer: int = 0
-player_tank = tank.Tank(owner=constans.PLAYER_TANK, x=2 * constans.SIDE_OF_BOX, y=23 * constans.SIDE_OF_BOX)
+game_field = generation_maze.maze(8, 8)
+start_tank_position = None
+spawn_positions = []
+
+for i in range(len(game_field)):
+    for j in range(len(game_field[0])):
+        if game_field[i][j] == 4 and start_tank_position is None:
+            start_tank_position = (j, i)
+        elif game_field[i][j] == 5 and game_field[i + 1][j + 1] == 5:
+            spawn_positions.append((j, i))
+
+player_tank = tank.Tank(owner=constans.PLAYER_TANK, x=start_tank_position[0] * constans.SIDE_OF_BOX,
+                        y=start_tank_position[1] * constans.SIDE_OF_BOX)
+for i in range(len(game_field)):
+    for j in range(len(game_field[0])):
+        if game_field[i][j] == 4 or game_field[i][j] == 5:
+            game_field[i][j] = 0
+
 player_tank.in_move = True
-game_field = readmap.read_map()
+# game_field = readmap.read_map()
 enemies: list = []
-spawns = [spawn.Spawn(y=0, x=50, spawn_timer=100, height=constans.TANK_HEIGHT, width=constans.TANK_WIDTH)]
+
+spawns = [spawn.Spawn(y=spawn_position[1] * constans.SIDE_OF_BOX, x=spawn_position[0] * constans.SIDE_OF_BOX,
+                      spawn_timer=1000, height=constans.TANK_HEIGHT,
+                      width=constans.TANK_WIDTH) for spawn_position in spawn_positions]
 bullets: list = []
 toDestroy: list = []
 justSpawned: list = []
@@ -30,19 +62,19 @@ score = 0
 winner = 0
 
 
-def checkWin():
+def check_win():
     win.fill((255, 255, 255))
     echo("YOU WIN", [400, 250, 400, 400])
     pg.display.update()
 
 
-def checkLose():
+def check_lose():
     win.fill((255, 255, 255))
     echo("YOU LOSE", [400, 250, 400, 400])
     pg.display.update()
 
 
-def spawnEnemies():
+def spawn_enemies():
     global amount_all_enemies
     global timer
     if min(current_spawns, amount_all_enemies) <= len(enemies):
@@ -63,11 +95,26 @@ def echo(text, position):
     win.blit(text, position)
 
 
-def echoText():
-    pygame.draw.rect(win, (255, 255, 255), (constans.MAP_WIDTH * constans.SIDE_OF_BOX + 5, 5, 250, 100))
+def echo_text():
     pygame.draw.rect(win, (255, 255, 255), (constans.MAP_WIDTH * constans.SIDE_OF_BOX + 5, 5, 250, 100))
     echo("Score: " + str(min(score, 999)), [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 5])
     echo("Enemies: " + str(min(amount_all_enemies, 999)), [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 35])
+
+
+way_mode = constans.BFS
+
+
+def print_way_info(results):
+    pygame.draw.rect(win, (255, 255, 255),
+                     (constans.MAP_WIDTH * constans.SIDE_OF_BOX + 5, 65, 350, 100 + len(results[0]) * 70))
+    for i in range(len(results[0])):
+        result = results[0][i]
+
+        echo(str(i + 1) + " enemy - Length: " + str(len(result)),
+             [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 65 + i * 70])
+        strs = {constans.BFS: 'BFS', constans.DFS: 'DFS', constans.UCS: 'UCS'}
+        echo("Mode: " + strs[way_mode], [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 90 + i * 70])
+    echo('Time: ' + str(round(results[1], 6)), [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 115 + i * 70])
 
 
 def process_game():
@@ -94,7 +141,7 @@ def process_game():
                         if amount_all_enemies == 0:
                             winner = 1
                         score += 1
-                        echoText()
+                        echo_text()
             else:
                 if collide_rects([(bullets[i].x, bullets[i].y),
                                   (bullets[i].x + bullets[i].width, bullets[i].y + bullets[i].height)],
@@ -103,7 +150,7 @@ def process_game():
                     winner = -1
                     break
             if not bullets[i] in justSpawned:
-                toDestroy.append((5 + bullets[i].x, 5 + bullets[i].y, bullets[i].width, bullets[i].height))
+                toDestroy.append((bullets[i].x, bullets[i].y, bullets[i].width, bullets[i].height))
             else:
                 justSpawned.remove(bullets[i])
             del bullets[i]
@@ -154,39 +201,41 @@ def collide_tank(sprite: tank.Tank or spawn.Spawn):
 
 def collide_work(sprite):
     global winner
-    nx_begin = min(max(0, sprite.x+sprite.move_sides[sprite.current_side][0]*sprite.speed),
-                   constans.MAP_WIDTH * constans.SIDE_OF_BOX - sprite.width + 1)//constans.SIDE_OF_BOX
-    ny_begin = min(max(0, sprite.y+sprite.move_sides[sprite.current_side][1]*sprite.speed),
-                   constans.MAP_WIDTH * constans.SIDE_OF_BOX - sprite.height + 1)//constans.SIDE_OF_BOX
-    nx_end = min(max(0, sprite.x+sprite.move_sides[sprite.current_side][0]*sprite.speed + sprite.width - 1),
-                 constans.MAP_WIDTH * constans.SIDE_OF_BOX - 1)//constans.SIDE_OF_BOX
-    ny_end = min(max(0, sprite.y+sprite.move_sides[sprite.current_side][1]*sprite.speed + sprite.height - 1),
-                 constans.MAP_WIDTH * constans.SIDE_OF_BOX - 1)//constans.SIDE_OF_BOX
-    isCollision = False
+    nx_begin = min(max(0, sprite.x + sprite.move_sides[sprite.current_side][0] * sprite.speed),
+                   constans.MAP_WIDTH * constans.SIDE_OF_BOX - sprite.width + 1) // constans.SIDE_OF_BOX
+    ny_begin = min(max(0, sprite.y + sprite.move_sides[sprite.current_side][1] * sprite.speed),
+                   constans.MAP_WIDTH * constans.SIDE_OF_BOX - sprite.height + 1) // constans.SIDE_OF_BOX
+    nx_end = min(max(0, sprite.x + sprite.move_sides[sprite.current_side][0] * sprite.speed + sprite.width - 1),
+                 constans.MAP_WIDTH * constans.SIDE_OF_BOX - 1) // constans.SIDE_OF_BOX
+    ny_end = min(max(0, sprite.y + sprite.move_sides[sprite.current_side][1] * sprite.speed + sprite.height - 1),
+                 constans.MAP_WIDTH * constans.SIDE_OF_BOX - 1) // constans.SIDE_OF_BOX
+
+    is_collision = False
     for i in range(ny_end - ny_begin + 1):
         for j in range(nx_end - nx_begin + 1):
             if game_field[ny_begin + i][nx_begin + j] in {constans.BRICK_BOX, constans.STEEL_BOX}:
-                isCollision = True
+                is_collision = True
                 if not isinstance(sprite, projectile.Projectile):
                     break
-            if game_field[ny_begin + i][nx_begin + j] == constans.BRICK_BOX and\
+            if game_field[ny_begin + i][nx_begin + j] == constans.BRICK_BOX and \
                     isinstance(sprite, projectile.Projectile):
-                toDestroy.append((5 + (nx_begin + j) * constans.SIDE_OF_BOX,
-                                  5 + (ny_begin + i) * constans.SIDE_OF_BOX,
+                toDestroy.append(((nx_begin + j) * constans.SIDE_OF_BOX,
+                                  (ny_begin + i) * constans.SIDE_OF_BOX,
                                   constans.SIDE_OF_BOX, constans.SIDE_OF_BOX))
                 game_field[ny_begin + i][nx_begin + j] = 0
-                isCollision = True
+                is_collision = True
                 break
             elif game_field[ny_begin + i][nx_begin + j] == constans.BASE_BOX:
                 winner = -1
-    return isCollision
+    return is_collision
 
 
 def colliding_edges(sprite):
     if (sprite.current_side == 'left' and sprite.x <= 0) or \
-       (sprite.current_side == 'up' and sprite.y <= 0) or \
-       (sprite.current_side == 'down' and sprite.y + sprite.height >= constans.MAP_HEIGHT * constans.SIDE_OF_BOX) or \
-       (sprite.current_side == 'right' and sprite.x + sprite.width >= constans.MAP_WIDTH * constans.SIDE_OF_BOX):
+            (sprite.current_side == 'up' and sprite.y <= 0) or \
+            (
+                    sprite.current_side == 'down' and sprite.y + sprite.height >= constans.MAP_HEIGHT * constans.SIDE_OF_BOX) or \
+            (sprite.current_side == 'right' and sprite.x + sprite.width >= constans.MAP_WIDTH * constans.SIDE_OF_BOX):
         return True
     return False
 
@@ -201,23 +250,23 @@ def collide(sprite):
 
 def get_destroyable():
     global toDestroy
-    toDestroy = [(5 + player_tank.x, 5 + player_tank.y, player_tank.width, player_tank.height)]
+    toDestroy = [(player_tank.x, player_tank.y, player_tank.width, player_tank.height)]
     for enemy in enemies:
-        toDestroy.append((5 + enemy.x, 5 + enemy.y, enemy.width, enemy.height))
+        toDestroy.append((enemy.x, enemy.y, enemy.width, enemy.height))
     for bullet in bullets:
-        toDestroy.append((5 + bullet.x, 5 + bullet.y, bullet.width, bullet.height))
+        toDestroy.append((bullet.x, bullet.y, bullet.width, bullet.height))
 
 
 def initial_draw():
     win.fill((255, 255, 255))
-    echoText()
+    echo_text()
     pg.draw.rect(win, constans.BACKGROUND_COLOR,
-                 (5, 5, constans.SIDE_OF_BOX * constans.MAP_WIDTH, constans.SIDE_OF_BOX * constans.MAP_HEIGHT))
+                 (0, 0, constans.SIDE_OF_BOX * constans.MAP_WIDTH, constans.SIDE_OF_BOX * constans.MAP_HEIGHT))
     for i in range(constans.MAP_HEIGHT):
         for j in range(constans.MAP_WIDTH):
-            if game_field[i][j] != 0:
+            if game_field[i][j] != 0 and game_field[i][j] != 4 and game_field[i][j] != 5:
                 win.blit(texturesfile.TEXTURES_DICT[game_field[i][j]],
-                         (5 + constans.SIDE_OF_BOX * j, 5 + constans.SIDE_OF_BOX * i))
+                         (constans.SIDE_OF_BOX * j, constans.SIDE_OF_BOX * i))
 
 
 def shoot(sprite):
@@ -234,12 +283,46 @@ def draw_game():
         pg.draw.rect(win, constans.BACKGROUND_COLOR,
                      destroyable)
 
-    win.blit(player_tank.textures[player_tank.current_side], (5 + player_tank.x, 5 + player_tank.y))
+    win.blit(player_tank.textures[player_tank.current_side], (player_tank.x, player_tank.y))
     for enemy in enemies:
-        win.blit(enemy.textures[enemy.current_side], (5 + enemy.x, 5 + enemy.y))
+        win.blit(enemy.textures[enemy.current_side], (enemy.x, enemy.y))
 
     for bullet in bullets:
-        win.blit(bullet.textures[bullet.current_side], (5 + bullet.x, 5 + bullet.y))
+        win.blit(bullet.textures[bullet.current_side], (bullet.x, bullet.y))
+
+
+last_ways = []
+colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for i in range(5)]
+
+
+def draw_way(ways):
+    # if last_ways:
+    for last_way in last_ways:
+        for (lx, ly) in last_way:
+            possible_brick_nodes = [(lx, ly), (lx + 1, ly), (lx, ly + 1), (lx + 1, ly + 1)]
+            for (x, y) in possible_brick_nodes:
+                real_x, real_y = x * constans.SIDE_OF_BOX, y * constans.SIDE_OF_BOX
+                if game_field[y][x] == constans.FREE_BOX:
+                    pg.draw.rect(win, constans.BACKGROUND_COLOR,
+                                 (real_x, real_y, constans.SIDE_OF_BOX,
+                                  constans.SIDE_OF_BOX))
+
+    if ways:
+        for i in range(len(ways)):
+            way = ways[i]
+            color = colors[i]
+            for (x, y) in way:
+                real_x, real_y = x * constans.SIDE_OF_BOX, y * constans.SIDE_OF_BOX
+                surface = pg.Surface((constans.TANK_WIDTH,
+                                      constans.TANK_WIDTH))
+                surface.fill(color)
+                surface.set_alpha(50)
+                win.blit(surface, (real_x, real_y))
+                possible_brick_nodes = [(x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1)]
+                for node in possible_brick_nodes:
+                    if game_field[node[1]][node[0]] == constans.BRICK_BOX:
+                        win.blit(texturesfile.TEXTURES_DICT[constans.BRICK_BOX],
+                                 (constans.SIDE_OF_BOX * node[0], constans.SIDE_OF_BOX * node[1]))
 
 
 def toEdge(sprite):
@@ -262,53 +345,59 @@ initial_draw()
 draw_game()
 while isActive:
     if winner == 1:
-        checkWin()
+        check_win()
         pygame.time.delay(3000)
         break
     elif winner == -1:
-        checkLose()
+        check_lose()
         pygame.time.delay(3000)
         break
     pygame.time.delay(constans.UPDATE_TIME)
     get_destroyable()
     if amount_all_enemies > 0:
-        spawnEnemies()
+        spawn_enemies()
     timer += constans.UPDATE_TIME
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
             isActive = False
 
+    if len(enemies) != 0 and timer % (constans.UPDATE_TIME * 6) == 0:
+        choices = {constans.BFS: bfs, constans.DFS: dfs, constans.UCS: ucs}
+        way_func = choices.get(way_mode)
+        results = track_time(
+            lambda: list(map(lambda enemy: way_func((player_tank.x, player_tank.y), (enemy.x, enemy.y), game_field),
+                             enemies)))
+        print_way_info(results)
+        draw_way(results[0])
+        last_ways = results[0]
+
     keys = pg.key.get_pressed()
-    if keys[pg.K_LEFT]:
-        player_tank.current_side = 'left'
+    if keys[pg.K_LEFT] or keys[pg.K_RIGHT] or keys[pg.K_UP] or keys[pg.K_DOWN]:
+        arrows = {pg.K_LEFT: 'left', pg.K_RIGHT: 'right', pg.K_UP: 'up', pg.K_DOWN: 'down'}
+        for key in arrows:
+            if keys[key]:
+                player_tank.current_side = arrows[key]
+
         if not collide_work(player_tank):
             player_tank.move()
         else:
             toEdge(player_tank)
-    elif keys[pg.K_RIGHT]:
-        player_tank.current_side = 'right'
-        if not collide_tank(player_tank):
-            player_tank.move()
-        else:
-            toEdge(player_tank)
-    elif keys[pg.K_UP]:
-        player_tank.current_side = 'up'
-        if not collide_tank(player_tank):
-            player_tank.move()
-        else:
-            toEdge(player_tank)
-    elif keys[pg.K_DOWN]:
-        player_tank.current_side = 'down'
-        if not collide_tank(player_tank):
-            player_tank.move()
-        else:
-            toEdge(player_tank)
-    elif keys[pg.K_SPACE]:
+
+    if keys[pg.K_SPACE]:
         shoot(player_tank)
+    if keys[pg.K_z]:
+        way_mode += 1
+        if way_mode > constans.UCS:
+            way_mode = constans.BFS
+        sleep(0.1)
+
     process_game()
     draw_game()
     pg.display.update()
 
-
 pygame.quit()
+
+# print(track_time(lambda: bfs((1 * 25, 1 * 25), (1 * 25, 3 * 25), game_field)))
+# print(track_time(lambda: dfs((2 * 25, 0 * 25), (0, 10 * 25), game_field)))
+# print(track_time(lambda: ucs((2 * 25, 0 * 25), (0, 10 * 25), game_field)))
