@@ -21,8 +21,11 @@ class BaseSprite:
         self.current_side = current_side
         self.x = x
         self.y = y
+        self.last_x = -1
+        self.last_y = -1
         self.in_move = in_move
         self.current_side = current_side
+
 
     def move(self):
         self.x = self.x + self.move_sides[self.current_side][0]*self.speed

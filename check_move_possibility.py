@@ -30,4 +30,4 @@ def bottom_if(node, game_map):
 
 def change_nodes(node):
     (x, y) = node
-    return floor(x / constans.SIDE_OF_BOX), floor(y / constans.SIDE_OF_BOX)
+    return round(x / constans.SIDE_OF_BOX), round(y / constans.SIDE_OF_BOX)

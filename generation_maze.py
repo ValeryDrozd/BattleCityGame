@@ -75,11 +75,11 @@ def generate_start_map(width, height):
 
         matrix.append(delta)
 
-    start_position = (1, 3)
+    start_position = (1, 1)
     matrix = fill_character_position(matrix, start_position, constans.PLAYER_TANK_BOX)
     spawn_positions = [(len(matrix[0]) - 3, 1), (len(matrix[0]) - 3, len(matrix[1]) - 3)]
-    base_position = (1, 1)
-    matrix[base_position[1]][base_position[0]] = constans.BASE_BOX
+    # base_position = (1, 1)
+    # matrix[base_position[1]][base_position[0]] = constans.BASE_BOX
     for i in range(len(spawn_positions)):
         matrix = fill_character_position(matrix, spawn_positions[i], constans.ENEMY_TANK_BOX)
 

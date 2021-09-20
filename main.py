@@ -1,3 +1,4 @@
+from a_star import a_star
 import random
 import time
 from time import sleep
@@ -12,6 +13,7 @@ import tank
 import texturesfile
 import spawn
 from bfs import bfs
+from check_move_possibility import change_nodes
 from dfs import dfs
 from ucs import ucs
 
@@ -96,12 +98,17 @@ def echo(text, position):
 
 
 def echo_text():
-    pygame.draw.rect(win, (255, 255, 255), (constans.MAP_WIDTH * constans.SIDE_OF_BOX + 5, 5, 250, 100))
-    echo("Score: " + str(min(score, 999)), [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 5])
-    echo("Enemies: " + str(min(amount_all_enemies, 999)), [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 35])
+    pygame.draw.rect(win, (255, 255, 255), (constans.MAP_WIDTH *
+                                            constans.SIDE_OF_BOX + 5, 5, 250, 100))
+    echo("Score: " + str(min(score, 999)),
+         [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 5])
+    echo("Enemies: " + str(min(amount_all_enemies, 999)),
+         [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 35])
+    echo("Your hp: " + str(min(player_tank.hp, 999)),
+         [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 65])
 
 
-way_mode = constans.BFS
+way_mode = constans.A_STAR
 
 
 def print_way_info(results):
@@ -112,9 +119,12 @@ def print_way_info(results):
 
         echo(str(i + 1) + " enemy - Length: " + str(len(result)),
              [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 65 + i * 70])
-        strs = {constans.BFS: 'BFS', constans.DFS: 'DFS', constans.UCS: 'UCS'}
-        echo("Mode: " + strs[way_mode], [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 90 + i * 70])
-    echo('Time: ' + str(round(results[1], 6)), [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 115 + i * 70])
+        strs = {constans.BFS: 'BFS', constans.DFS: 'DFS',
+                constans.UCS: 'UCS', constans.A_STAR: 'A-Star'}
+        echo("Mode: " + strs[way_mode], [constans.MAP_WIDTH *
+                                         constans.SIDE_OF_BOX + 10, 90 + i * 70])
+    echo('Time: ' + str(round(results[1], 6)),
+         [constans.MAP_WIDTH * constans.SIDE_OF_BOX + 10, 115 + i * 70])
 
 
 def process_game():
@@ -122,35 +132,40 @@ def process_game():
     global winner
     global score
     for enemy in enemies:
-        enemy.analyse(collide(enemy))
+        # enemy.analyse(collide(enemy))
         if not collide(enemy):
             enemy.move()
-        if random.randint(0, 10) == 0:
-            shoot(enemy)
+        # if random.randint(0, 10) == 0:
+        #     shoot(enemy)
     for i in range(len(bullets) - 1, -1, -1):
         t = collide_work(bullets[i])
-        if collide(bullets[i]) or t:
+        if collide(bullets[i]) or t != 0:
             if bullets[i].owner == 1:
                 for j in range(len(enemies) - 1, -1, -1):
                     if collide_rects([(bullets[i].x, bullets[i].y),
                                       (bullets[i].x + bullets[i].width, bullets[i].y + bullets[i].height)],
                                      [(enemies[j].x, enemies[j].y),
                                       (enemies[j].x + enemies[j].width, enemies[j].y + enemies[j].height)]):
-                        del enemies[j]
-                        amount_all_enemies -= 1
-                        if amount_all_enemies == 0:
-                            winner = 1
-                        score += 1
-                        echo_text()
+                        enemies[j].hp -= 1
+                        if enemies[j].hp == 0:
+                            del enemies[j]
+                            amount_all_enemies -= 1
+                            if amount_all_enemies == 0:
+                                winner = 1
+                            score += 1
+                            echo_text()
             else:
                 if collide_rects([(bullets[i].x, bullets[i].y),
                                   (bullets[i].x + bullets[i].width, bullets[i].y + bullets[i].height)],
                                  [(player_tank.x, player_tank.y),
                                   (player_tank.x + player_tank.width, player_tank.y + player_tank.height)]):
-                    winner = -1
-                    break
+                    player_tank.hp -= 1
+                    echo_text()
+                    if player_tank.hp == 0:
+                        winner = -1
             if not bullets[i] in justSpawned:
-                toDestroy.append((bullets[i].x, bullets[i].y, bullets[i].width, bullets[i].height))
+                toDestroy.append(
+                    (bullets[i].x, bullets[i].y, bullets[i].width, bullets[i].height))
             else:
                 justSpawned.remove(bullets[i])
             del bullets[i]
@@ -182,10 +197,12 @@ def collide_tank(sprite: tank.Tank or spawn.Spawn):
     if isinstance(sprite, tank.Tank) or isinstance(sprite, projectile.Projectile):
         sprite_left_top = (
             sprite.x + sprite.move_sides[sprite.current_side][0], sprite.y + sprite.move_sides[sprite.current_side][1])
-        sprite_right_bot = (sprite_left_top[0] + sprite.width, sprite_left_top[1] + sprite.height)
+        sprite_right_bot = (
+            sprite_left_top[0] + sprite.width, sprite_left_top[1] + sprite.height)
     else:
         sprite_left_top = (sprite.x, sprite.y)
-        sprite_right_bot = (sprite_left_top[0] + sprite.width, sprite_left_top[1] + sprite.height)
+        sprite_right_bot = (
+            sprite_left_top[0] + sprite.width, sprite_left_top[1] + sprite.height)
     is_collision: bool = False
     for current in tanks:
         if current != sprite and collide_rects([sprite_left_top, sprite_right_bot],
@@ -194,7 +211,7 @@ def collide_tank(sprite: tank.Tank or spawn.Spawn):
             is_collision = True
             break
     if not is_collision and isinstance(sprite, tank.Tank):
-        return collide_work(sprite)
+        return collide_work(sprite) != 0
     else:
         return is_collision
 
@@ -210,11 +227,11 @@ def collide_work(sprite):
     ny_end = min(max(0, sprite.y + sprite.move_sides[sprite.current_side][1] * sprite.speed + sprite.height - 1),
                  constans.MAP_WIDTH * constans.SIDE_OF_BOX - 1) // constans.SIDE_OF_BOX
 
-    is_collision = False
+    is_collision = 0
     for i in range(ny_end - ny_begin + 1):
         for j in range(nx_end - nx_begin + 1):
             if game_field[ny_begin + i][nx_begin + j] in {constans.BRICK_BOX, constans.STEEL_BOX}:
-                is_collision = True
+                is_collision = 1
                 if not isinstance(sprite, projectile.Projectile):
                     break
             if game_field[ny_begin + i][nx_begin + j] == constans.BRICK_BOX and \
@@ -223,7 +240,7 @@ def collide_work(sprite):
                                   (ny_begin + i) * constans.SIDE_OF_BOX,
                                   constans.SIDE_OF_BOX, constans.SIDE_OF_BOX))
                 game_field[ny_begin + i][nx_begin + j] = 0
-                is_collision = True
+                is_collision = constans.BRICK_BOX
                 break
             elif game_field[ny_begin + i][nx_begin + j] == constans.BASE_BOX:
                 winner = -1
@@ -242,7 +259,8 @@ def colliding_edges(sprite):
 
 def collide(sprite):
     global winner
-    res = colliding_edges(sprite) or collide_work(sprite) or collide_tank(sprite)
+    res = colliding_edges(sprite) or (collide_work(
+        sprite) != 0) or collide_tank(sprite)
     if res and isinstance(sprite, tank.Tank):
         winner = 0
     return res
@@ -250,7 +268,8 @@ def collide(sprite):
 
 def get_destroyable():
     global toDestroy
-    toDestroy = [(player_tank.x, player_tank.y, player_tank.width, player_tank.height)]
+    toDestroy = [(player_tank.x, player_tank.y,
+                  player_tank.width, player_tank.height)]
     for enemy in enemies:
         toDestroy.append((enemy.x, enemy.y, enemy.width, enemy.height))
     for bullet in bullets:
@@ -283,7 +302,8 @@ def draw_game():
         pg.draw.rect(win, constans.BACKGROUND_COLOR,
                      destroyable)
 
-    win.blit(player_tank.textures[player_tank.current_side], (player_tank.x, player_tank.y))
+    win.blit(
+        player_tank.textures[player_tank.current_side], (player_tank.x, player_tank.y))
     for enemy in enemies:
         win.blit(enemy.textures[enemy.current_side], (enemy.x, enemy.y))
 
@@ -292,14 +312,16 @@ def draw_game():
 
 
 last_ways = []
-colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for i in range(5)]
+colors = [(random.randint(0, 255), random.randint(
+    0, 255), random.randint(0, 255)) for i in range(5)]
 
 
 def draw_way(ways):
     # if last_ways:
     for last_way in last_ways:
         for (lx, ly) in last_way:
-            possible_brick_nodes = [(lx, ly), (lx + 1, ly), (lx, ly + 1), (lx + 1, ly + 1)]
+            possible_brick_nodes = [
+                (lx, ly), (lx + 1, ly), (lx, ly + 1), (lx + 1, ly + 1)]
             for (x, y) in possible_brick_nodes:
                 real_x, real_y = x * constans.SIDE_OF_BOX, y * constans.SIDE_OF_BOX
                 if game_field[y][x] == constans.FREE_BOX:
@@ -318,7 +340,8 @@ def draw_way(ways):
                 surface.fill(color)
                 surface.set_alpha(50)
                 win.blit(surface, (real_x, real_y))
-                possible_brick_nodes = [(x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1)]
+                possible_brick_nodes = [
+                    (x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1)]
                 for node in possible_brick_nodes:
                     if game_field[node[1]][node[0]] == constans.BRICK_BOX:
                         win.blit(texturesfile.TEXTURES_DICT[constans.BRICK_BOX],
@@ -331,7 +354,7 @@ def toEdge(sprite):
     while right - left != 1:
         mid = (right + left) // 2
         sprite.speed = mid
-        if collide(sprite):
+        if collide(sprite) != 0:
             left = mid
         else:
             right = mid
@@ -343,6 +366,9 @@ def toEdge(sprite):
 
 initial_draw()
 draw_game()
+
+target = (10 * constans.SIDE_OF_BOX, 10 * constans.SIDE_OF_BOX)
+
 while isActive:
     if winner == 1:
         check_win()
@@ -363,32 +389,70 @@ while isActive:
             isActive = False
 
     if len(enemies) != 0 and timer % (constans.UPDATE_TIME * 6) == 0:
-        choices = {constans.BFS: bfs, constans.DFS: dfs, constans.UCS: ucs}
-        way_func = choices.get(way_mode)
-        results = track_time(
-            lambda: list(map(lambda enemy: way_func((player_tank.x, player_tank.y), (enemy.x, enemy.y), game_field),
-                             enemies)))
-        print_way_info(results)
-        draw_way(results[0])
-        last_ways = results[0]
+        choices = {constans.BFS: bfs, constans.DFS: dfs,
+                   constans.UCS: ucs, constans.A_STAR: a_star}
+        # way_func = choices.get(way_mode)
+        # results = track_time(
+        #     lambda: list(map(lambda enemy: way_func((player_tank.x, player_tank.y), (enemy.x, enemy.y), game_field),
+        #                      enemies)))
+        # print(results[0])
+        # print_way_info(results)
+        # draw_way(results[0])
+        # last_ways = results[0]
 
     keys = pg.key.get_pressed()
     if keys[pg.K_LEFT] or keys[pg.K_RIGHT] or keys[pg.K_UP] or keys[pg.K_DOWN]:
-        arrows = {pg.K_LEFT: 'left', pg.K_RIGHT: 'right', pg.K_UP: 'up', pg.K_DOWN: 'down'}
+        arrows = {pg.K_LEFT: 'left', pg.K_RIGHT: 'right',
+                  pg.K_UP: 'up', pg.K_DOWN: 'down'}
         for key in arrows:
             if keys[key]:
                 player_tank.current_side = arrows[key]
 
-        if not collide_work(player_tank):
+        if not collide(player_tank):
+            #     player_tank.auto_move(game_field)
             player_tank.move()
         else:
             toEdge(player_tank)
+
+
+    if collide_work(player_tank) == constans.BRICK_BOX:
+        shoot(player_tank)
+
+    for enemy in enemies:
+        enemy.auto_move(game_field, (player_tank.x, player_tank.y))
+
+    check = player_tank.auto_move(game_field, target)
+    if check == 1:
+        target = (
+            (random.randint(0, 7) * 3 + 1) * constans.SIDE_OF_BOX,
+            (random.randint(0, 7) * 3 + 1) * constans.SIDE_OF_BOX)
+
+    # if player_tank.check_path_for_directness(
+    #         player_tank.get_path_part_with_enemy(map(lambda enemy: change_nodes((enemy.x, enemy.y)), enemies))):
+    #     shoot(player_tank)
+
+    for enemy in enemies:
+        if player_tank.check_if_tank_on_line(enemy, game_field):
+            shoot(player_tank)
+
+        if collide_work(player_tank) == constans.BRICK_BOX or enemy.check_if_tank_on_line(player_tank, game_field):
+            shoot(enemy)
+
+
+    if collide(player_tank) == 0:
+        player_tank.move()
+    else:
+        toEdge(player_tank)
+    result = player_tank.path
+
+    draw_way([result])
+    last_ways = [result]
 
     if keys[pg.K_SPACE]:
         shoot(player_tank)
     if keys[pg.K_z]:
         way_mode += 1
-        if way_mode > constans.UCS:
+        if way_mode > constans.A_STAR:
             way_mode = constans.BFS
         sleep(0.1)
 
