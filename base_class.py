@@ -13,7 +13,7 @@ class BaseSprite:
     speed: int = 3
     move_sides: dict = {'left': (-1, 0), 'right': (1, 0), 'up': (0, -1), 'down': (0, 1)}
     reload_time = 1000
-    last_shot = -1000
+    last_shot = -5000
     owner = 0
 
     def __init__(self, textures: dict, x: int, y: int, in_move: bool = False, current_side='left'):

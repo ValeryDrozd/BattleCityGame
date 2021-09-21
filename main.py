@@ -1,3 +1,4 @@
+from math import e
 from a_star import a_star
 import random
 import time
@@ -142,10 +143,11 @@ def process_game():
         if collide(bullets[i]) or t != 0:
             if bullets[i].owner == 1:
                 for j in range(len(enemies) - 1, -1, -1):
-                    if collide_rects([(bullets[i].x, bullets[i].y),
-                                      (bullets[i].x + bullets[i].width, bullets[i].y + bullets[i].height)],
-                                     [(enemies[j].x, enemies[j].y),
-                                      (enemies[j].x + enemies[j].width, enemies[j].y + enemies[j].height)]):
+                    check = collide_rects([(bullets[i].x, bullets[i].y),
+                                           (bullets[i].x + bullets[i].width, bullets[i].y + bullets[i].height)],
+                                          [(enemies[j].x, enemies[j].y),
+                                           (enemies[j].x + enemies[j].width, enemies[j].y + enemies[j].height)])
+                    if check:
                         enemies[j].hp -= 1
                         if enemies[j].hp == 0:
                             del enemies[j]
@@ -175,21 +177,45 @@ def process_game():
 
 
 def collide_rects(first, second):
-    sprite_left_top = first[0]
-    sprite_right_bot = first[1]
-    current_left_top = second[0]
-    current_right_bot = second[1]
-    temp_left_top = sprite_left_top
-    temp_right_bot = sprite_right_bot
-    if temp_left_top[0] > current_left_top[0]:
-        temp_left_top, temp_right_bot, current_left_top, current_right_bot = \
-            current_left_top, current_right_bot, temp_left_top, temp_right_bot
+    [first, second] = sorted([first, second], key=lambda a: a[0][0])
+    first_left_top = first[0]
+    first_right_bot = first[1]
+    second_left_top = second[0]
+    second_right_bot = second[1]
+    aLeftOfB = first_right_bot[0] < second_left_top[0]
+    aRightOfB = first_left_top[0] > second_right_bot[0]
+    aAboveB = first_left_top[1] > second_right_bot[1]
+    aBelowB = first_right_bot[1] < second_left_top[1]
 
-    if current_left_top[0] < temp_right_bot[0] and (
-            temp_right_bot[1] >= current_left_top[1] >= temp_left_top[1] or
-            temp_right_bot[1] >= current_right_bot[1] >= temp_left_top[1]):
-        return True
-    return False
+    return not (aLeftOfB or aRightOfB or aAboveB or aBelowB)
+    # if (RectA.Left < RectB.Right & & RectA.Right > RectB.Left & &
+    #         RectA.Top > RectB.Bottom & & RectA.Bottom < RectB.Top)
+    # if (first_left_top[0] == first_right_bot[0] or first_left_top[1] == first_right_bot[1]
+    #         or second_left_top[0] == second_right_bot[0]
+    #         or second_left_top[1] == second_right_bot[1]):
+    #     return True
+    #
+    # if first_left_top[0] >= second_right_bot[0] or second_left_top[0] >= first_right_bot[0]:
+    #     return True
+    # #
+    # if first_right_bot[1] <= second_left_top[1] or second_right_bot[1] <= first_left_top[1]:
+    #     return True
+    # #
+    # return False
+
+    # if first_right_bot[0] >= second_left_top[0]:
+
+    # temp_left_top = sprite_left_top
+    # temp_right_bot = sprite_right_bot
+    # if temp_left_top[0] > current_left_top[0]:
+    #     temp_left_top, temp_right_bot, current_left_top, current_right_bot = \
+    #         current_left_top, current_right_bot, temp_left_top, temp_right_bot
+    #
+    # if current_left_top[0] < temp_right_bot[0] and (
+    #         temp_right_bot[1] >= current_left_top[1] >= temp_left_top[1] or
+    #         temp_right_bot[1] >= current_right_bot[1] >= temp_left_top[1]):
+    #     return True
+    # return False
 
 
 def collide_tank(sprite: tank.Tank or spawn.Spawn):
@@ -251,7 +277,7 @@ def colliding_edges(sprite):
     if (sprite.current_side == 'left' and sprite.x <= 0) or \
             (sprite.current_side == 'up' and sprite.y <= 0) or \
             (
-                    sprite.current_side == 'down' and sprite.y + sprite.height >= constans.MAP_HEIGHT * constans.SIDE_OF_BOX) or \
+        sprite.current_side == 'down' and sprite.y + sprite.height >= constans.MAP_HEIGHT * constans.SIDE_OF_BOX) or \
             (sprite.current_side == 'right' and sprite.x + sprite.width >= constans.MAP_WIDTH * constans.SIDE_OF_BOX):
         return True
     return False
@@ -378,7 +404,7 @@ while isActive:
         check_lose()
         pygame.time.delay(3000)
         break
-    pygame.time.delay(constans.UPDATE_TIME)
+    pygame.time.delay(constans.UPDATE_TIME - 10)
     get_destroyable()
     if amount_all_enemies > 0:
         spawn_enemies()
@@ -409,11 +435,9 @@ while isActive:
                 player_tank.current_side = arrows[key]
 
         if not collide(player_tank):
-            #     player_tank.auto_move(game_field)
             player_tank.move()
         else:
             toEdge(player_tank)
-
 
     if collide_work(player_tank) == constans.BRICK_BOX:
         shoot(player_tank)
@@ -427,17 +451,17 @@ while isActive:
             (random.randint(0, 7) * 3 + 1) * constans.SIDE_OF_BOX,
             (random.randint(0, 7) * 3 + 1) * constans.SIDE_OF_BOX)
 
-    # if player_tank.check_path_for_directness(
-    #         player_tank.get_path_part_with_enemy(map(lambda enemy: change_nodes((enemy.x, enemy.y)), enemies))):
-    #     shoot(player_tank)
-
     for enemy in enemies:
-        if player_tank.check_if_tank_on_line(enemy, game_field):
-            shoot(player_tank)
-
-        if collide_work(player_tank) == constans.BRICK_BOX or enemy.check_if_tank_on_line(player_tank, game_field):
+        enemy_check = enemy.check_if_tank_on_line(player_tank, game_field)
+        if collide_work(enemy) == constans.BRICK_BOX:
             shoot(enemy)
-
+        if enemy_check:
+            shoot(enemy)
+            enemy.current_side = enemy_check
+        check = player_tank.check_if_tank_on_line(enemy, game_field)
+        if check:  # or collide_work(player_tank) == constans.BRICK_BOX:
+            shoot(player_tank)
+            player_tank.current_side = check
 
     if collide(player_tank) == 0:
         player_tank.move()
@@ -461,7 +485,3 @@ while isActive:
     pg.display.update()
 
 pygame.quit()
-
-# print(track_time(lambda: bfs((1 * 25, 1 * 25), (1 * 25, 3 * 25), game_field)))
-# print(track_time(lambda: dfs((2 * 25, 0 * 25), (0, 10 * 25), game_field)))
-# print(track_time(lambda: ucs((2 * 25, 0 * 25), (0, 10 * 25), game_field)))

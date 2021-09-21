@@ -25,9 +25,11 @@ class Tank(base_class.BaseSprite):
                              'up': texturesfile.ENEMY_TANK_UP, 'down': texturesfile.ENEMY_TANK_DOWN}
             self.hp = 1
         else:
+            # self.reload_time = 200
             self.textures = {'left': texturesfile.PLAYER_TANK_LEFT, 'right': texturesfile.PLAYER_TANK_RIGHT,
                              'up': texturesfile.PLAYER_TANK_UP, 'down': texturesfile.PLAYER_TANK_DOWN}
             self.hp = 3
+
     def shoot(self):
         new_projectile = projectile.Projectile(x=0, y=0)
         new_projectile.current_side = self.current_side
@@ -68,7 +70,6 @@ class Tank(base_class.BaseSprite):
                     if len(self.path) > 1:
                         next_position = self.path[1]
                     else:
-                        # target = ((random.randint(0,7)*3+1)*constans.SIDE_OF_BOX, (random.randint(0,7)*3+1)*constans.SIDE_OF_BOX)
                         return 1
                 delta = (-matrix_position[0] + next_position[0],
                          -matrix_position[1] + next_position[1])
@@ -104,24 +105,39 @@ class Tank(base_class.BaseSprite):
     def check_if_tank_on_line(self, enemy, game_map):
         matrix_x, matrix_y = change_nodes((self.x, self.y))
         enemy_matrix_x, enemy_matrix_y = change_nodes((enemy.x, enemy.y))
-        isVertical = matrix_x == enemy_matrix_x
-        isHorizontal = matrix_y == enemy_matrix_y
+        isVertical = matrix_x - enemy_matrix_x in range(-1, 1)
+        isHorizontal = matrix_y - enemy_matrix_y in range(-1, 1)
         nodes = []
         if isHorizontal:
             x_start = min(matrix_x, enemy_matrix_x)
             x_end = max(matrix_x, enemy_matrix_x) + 2
-            nodes = [(i, j) for i in range(x_start, x_end) for j in range(matrix_y, matrix_y + 2)]
+            nodes = [(i, j) for i in range(x_start, x_end)
+                     for j in range(matrix_y, matrix_y + 2)]
 
         if isVertical:
             y_start = min(matrix_y, enemy_matrix_y)
             y_end = max(matrix_y, enemy_matrix_y) + 2
 
-            nodes = [(j, i) for i in range(y_start, y_end) for j in range(matrix_x, matrix_x + 2)]
+            nodes = [(j, i) for i in range(y_start, y_end)
+                     for j in range(matrix_x, matrix_x + 2)]
 
         if len(nodes) == 0:
             return False
         for node in nodes:
             if game_map[node[1]][node[0]] == constans.STEEL_BOX:
                 return False
-
-        return True
+        
+        last_side = self.current_side
+        if isHorizontal:
+            if matrix_x < enemy_matrix_x:
+                self.current_side = 'right'
+            else:
+                self.current_side = 'left'
+        elif isVertical:
+            if matrix_y < enemy_matrix_y:
+                self.current_side = 'down'
+            else:
+                self.current_side = 'up'
+        
+        
+        return last_side
