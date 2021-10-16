@@ -1,4 +1,8 @@
+from copy import deepcopy
 from math import e
+from writer import write
+
+from pygame import constants
 from a_star import a_star
 import random
 import time
@@ -394,16 +398,23 @@ initial_draw()
 draw_game()
 
 target = (10 * constans.SIDE_OF_BOX, 10 * constans.SIDE_OF_BOX)
-
+start_time = time.time()
 while isActive:
-    if winner == 1:
-        check_win()
-        pygame.time.delay(3000)
+    # if winner == 1:
+    #     check_win()
+    #     pygame.time.delay(3000)
+    #     break
+    # elif winner == -1:
+    #     check_lose()
+    #     pygame.time.delay(3000)
+    #     break
+    if winner in [-1, 1]:
+        arr = list(map(lambda x: str(x),
+                       [winner == 1, score,
+                        'a-star', 'a-star', time.time() - start_time, ]))
+        write('output.csv', ','.join(arr) + "\n")
         break
-    elif winner == -1:
-        check_lose()
-        pygame.time.delay(3000)
-        break
+
     pygame.time.delay(constans.UPDATE_TIME - 10)
     get_destroyable()
     if amount_all_enemies > 0:
@@ -445,7 +456,19 @@ while isActive:
     for enemy in enemies:
         enemy.auto_move(game_field, (player_tank.x, player_tank.y))
 
+    current_game_field = deepcopy(game_field)
+    player_position = change_nodes((player_tank.x, player_tank.y))
+    current_game_field[player_position[1]
+                       ][player_position[0]] = constans.PLAYER_TANK_BOX
+    for enemy in enemies:
+        enemy_position = change_nodes((enemy.x, enemy.y))
+        current_game_field[enemy_position[1]
+                           ][enemy_position[0]] = constans.ENEMY_TANK_BOX
+
     check = player_tank.auto_move(game_field, target)
+    # check = player_tank.move_minimax(
+    # current_game_field, (19*constans.SIDE_OF_BOX, 19*constans.SIDE_OF_BOX))
+
     if check == 1:
         target = (
             (random.randint(0, 7) * 3 + 1) * constans.SIDE_OF_BOX,
