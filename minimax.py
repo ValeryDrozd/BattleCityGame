@@ -75,7 +75,6 @@ def minimax(curr_node: Node, alpha, beta, depth):
 def expectimax(curr_node: Node, depth):
     is_max = depth % 2 == 0
     if len(curr_node.children) == 0:
-        # print(curr_node.value)
         return curr_node.value
 
     if is_max:

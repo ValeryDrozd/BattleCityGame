@@ -1,5 +1,5 @@
 import math
-from minimax import FieldState, minimax
+from minimax import FieldState, expectimax, minimax
 from bfs import bfs
 from check_move_possibility import change_nodes
 from a_star import a_star
@@ -28,7 +28,7 @@ class Tank(base_class.BaseSprite):
                              'up': texturesfile.ENEMY_TANK_UP, 'down': texturesfile.ENEMY_TANK_DOWN}
             self.hp = 1
         else:
-            # self.reload_time = 200
+            self.reload_time = 200
             self.textures = {'left': texturesfile.PLAYER_TANK_LEFT, 'right': texturesfile.PLAYER_TANK_RIGHT,
                              'up': texturesfile.PLAYER_TANK_UP, 'down': texturesfile.PLAYER_TANK_DOWN}
             self.hp = 3
@@ -62,14 +62,15 @@ class Tank(base_class.BaseSprite):
         self.timer_sleep -= 1
 
         if self.x % constans.SIDE_OF_BOX == 0 and self.y % constans.SIDE_OF_BOX == 0 and self.timer_sleep <= 0:
+            self.timer_sleep = 20
             state = FieldState(game_map)
             
             target_position = change_nodes(target)
             player_position = change_nodes((self.x, self.y))
 
             root_node = tree_build(state, target_position)
-            best_value = minimax(root_node, -math.inf, math.inf, 0)
-            # best_value = expectimax(self.root_node, 0)
+            # best_value = minimax(root_node, -math.inf, math.inf, 0)
+            best_value = expectimax(root_node, 0)
 
             for child in root_node.children:
                 if child.value == best_value:
@@ -102,8 +103,9 @@ class Tank(base_class.BaseSprite):
         if self.x % constans.SIDE_OF_BOX == 0 and self.y % constans.SIDE_OF_BOX == 0 and self.timer_sleep <= 0:
             self.timer_sleep = 20
             matrix_position = change_nodes((self.x, self.y))
-
-            self.path = a_star((self.x, self.y), target, game_map)
+            # func = a_star if self.owner == constans.PLAYER_TANK else bfs
+            func = a_star
+            self.path = func((self.x, self.y), target, game_map)
             if len(self.path) > 0:
                 next_position = self.path[0]
                 if matrix_position == next_position:

@@ -19,7 +19,7 @@ def evaluate(node: Node, target: tuple[int, int]):
             enemy_distance = distance
     target_distance = math.sqrt(math.pow(
         target[0] - player_coord[0], 2) + math.pow(target[1] - player_coord[1], 2))
-    output = -(target_distance + 10/enemy_distance)
+    output = -(target_distance + enemy_distance)/2
 
     return output
 

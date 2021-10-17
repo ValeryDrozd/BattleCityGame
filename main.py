@@ -137,6 +137,7 @@ def process_game():
     global winner
     global score
     for enemy in enemies:
+        # For random move
         # enemy.analyse(collide(enemy))
         if not collide(enemy):
             enemy.move()
@@ -411,7 +412,7 @@ while isActive:
     if winner in [-1, 1]:
         arr = list(map(lambda x: str(x),
                        [winner == 1, score,
-                        'a-star', 'a-star', time.time() - start_time, ]))
+                        'a-star', 'a-star', time.time() - start_time]))
         write('output.csv', ','.join(arr) + "\n")
         break
 
@@ -453,6 +454,7 @@ while isActive:
     if collide_work(player_tank) == constans.BRICK_BOX:
         shoot(player_tank)
 
+    # For non-random move
     for enemy in enemies:
         enemy.auto_move(game_field, (player_tank.x, player_tank.y))
 
@@ -467,7 +469,7 @@ while isActive:
 
     check = player_tank.auto_move(game_field, target)
     # check = player_tank.move_minimax(
-    # current_game_field, (19*constans.SIDE_OF_BOX, 19*constans.SIDE_OF_BOX))
+        # current_game_field, (19*constans.SIDE_OF_BOX, 19*constans.SIDE_OF_BOX))
 
     if check == 1:
         target = (
