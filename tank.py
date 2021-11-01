@@ -21,6 +21,7 @@ class Tank(base_class.BaseSprite):
         self.owner = owner
         # self.target = (10*constans.SIDE_OF_BOX, 10*constans.SIDE_OF_BOX)
         self.path = []
+        self.score = 0
         self.timer_sleep = 20
         self.reload_time = 2000
         if owner == constans.COMPUTER_TANK:
@@ -28,7 +29,7 @@ class Tank(base_class.BaseSprite):
                              'up': texturesfile.ENEMY_TANK_UP, 'down': texturesfile.ENEMY_TANK_DOWN}
             self.hp = 1
         else:
-            self.reload_time = 200
+            self.reload_time = 1000
             self.textures = {'left': texturesfile.PLAYER_TANK_LEFT, 'right': texturesfile.PLAYER_TANK_RIGHT,
                              'up': texturesfile.PLAYER_TANK_UP, 'down': texturesfile.PLAYER_TANK_DOWN}
             self.hp = 3
@@ -37,6 +38,7 @@ class Tank(base_class.BaseSprite):
         new_projectile = projectile.Projectile(x=0, y=0)
         new_projectile.current_side = self.current_side
         new_projectile.owner = self.owner
+        self.score += 20
         if self.current_side == 'left':
             new_projectile.y = self.y + self.height // 2 - constans.BULLET_HEIGHT // 2
             new_projectile.x = max(self.x - constans.BULLET_WIDTH, 0)
@@ -101,6 +103,7 @@ class Tank(base_class.BaseSprite):
         self.timer_sleep -= 1
 
         if self.x % constans.SIDE_OF_BOX == 0 and self.y % constans.SIDE_OF_BOX == 0 and self.timer_sleep <= 0:
+            self.score += 10
             self.timer_sleep = 20
             matrix_position = change_nodes((self.x, self.y))
             # func = a_star if self.owner == constans.PLAYER_TANK else bfs
@@ -113,6 +116,7 @@ class Tank(base_class.BaseSprite):
                     if len(self.path) > 1:
                         next_position = self.path[1]
                     else:
+                        self.score += 100
                         return 1
                 delta = (-matrix_position[0] + next_position[0],
                          -matrix_position[1] + next_position[1])

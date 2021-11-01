@@ -156,6 +156,7 @@ def process_game():
                         enemies[j].hp -= 1
                         if enemies[j].hp == 0:
                             del enemies[j]
+                            player_tank.score += 300
                             amount_all_enemies -= 1
                             if amount_all_enemies == 0:
                                 winner = 1
@@ -411,9 +412,9 @@ while isActive:
     #     break
     if winner in [-1, 1]:
         arr = list(map(lambda x: str(x),
-                       [winner == 1, score,
-                        'a-star', 'a-star', time.time() - start_time]))
-        write('output.csv', ','.join(arr) + "\n")
+                       [winner == 1, player_tank.score + (300 if winner == 1 else 0),
+                        'a-star', 'a-star', timer]))
+        write('output1.csv', ','.join(arr) + "\n")
         break
 
     pygame.time.delay(constans.UPDATE_TIME - 10)
