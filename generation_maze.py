@@ -3,8 +3,8 @@ from random import randint
 import constans
 
 
-def maze(width, height):
-    matrix = generate_start_map(width, height)
+def maze(width, height, start_tank_position=(1, 1), start_enemies_positions=[]):
+    matrix = generate_start_map(width, height, start_tank_position, start_enemies_positions)
     visited = [[False for i in range(width)] for j in range(height)]
     current = (0, 0)
     visited[current[1]][current[0]] = True
@@ -15,7 +15,7 @@ def maze(width, height):
         next_node = [(current_x - 1, current_y), (current_x + 1, current_y),
                      (current_x, current_y - 1), (current_x, current_y + 1)]
         next_node = list(filter(lambda item: 0 <= item[0] < width and 0 <= item[1] < height
-                                             and not visited[item[1]][item[0]], next_node))
+                                and not visited[item[1]][item[0]], next_node))
 
         if len(next_node) == 0:
             current = stack.pop()
@@ -60,10 +60,14 @@ def break_wall(matrix, start_node, target_node):
     return matrix
 
 
-def generate_start_map(width, height):
+def generate_start_map(width, height, start_tank_position, start_enemies_positions):
     matrix = []
     real_width = width * 3 + 1
     real_height = height * 3 + 1
+    start_tank_position = (
+        start_tank_position[0]*3 + 1, start_tank_position[1]*3 + 1)
+    start_enemies_positions = list(
+        map(lambda pos: (pos[0]*3 + 1, pos[1]*3 + 1), start_enemies_positions))
     for i in range(real_height):
         delta = []
         for j in range(real_width):
@@ -75,13 +79,17 @@ def generate_start_map(width, height):
 
         matrix.append(delta)
 
-    start_position = (1, 1)
-    matrix = fill_character_position(matrix, start_position, constans.PLAYER_TANK_BOX)
-    spawn_positions = [(len(matrix[0]) - 3, 1), (len(matrix[0]) - 3, len(matrix[1]) - 3)]
+    matrix = fill_character_position(
+        matrix, start_tank_position, constans.PLAYER_TANK_BOX)
+    # spawn_positions = [(len(matrix[0]) - 3, 1), (len(matrix[0]) - 3, len(matrix[1]) - 3)]
     # base_position = (1, 1)
     # matrix[base_position[1]][base_position[0]] = constans.BASE_BOX
-    for i in range(len(spawn_positions)):
-        matrix = fill_character_position(matrix, spawn_positions[i], constans.ENEMY_TANK_BOX)
+    # for i in range(len(spawn_positions)):
+    #     matrix = fill_character_position(matrix, spawn_positions[i], constans.ENEMY_TANK_BOX)
+
+    for enemy_position in start_enemies_positions:
+        matrix = fill_character_position(
+            matrix, enemy_position, constans.ENEMY_TANK_BOX)
 
     return matrix
 

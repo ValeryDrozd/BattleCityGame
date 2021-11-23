@@ -5,7 +5,7 @@ from minimax import FieldState, Node
 from check_move_possibility import left_if, right_if, up_if, bottom_if, change_nodes
 
 
-def evaluate(node: Node, target: tuple[int, int]):
+def evaluate(node: Node, target):
     enemy_distance = math.inf
     player_coord = node.state.get_player_position()
     if target == player_coord:
@@ -19,25 +19,25 @@ def evaluate(node: Node, target: tuple[int, int]):
             enemy_distance = distance
     target_distance = math.sqrt(math.pow(
         target[0] - player_coord[0], 2) + math.pow(target[1] - player_coord[1], 2))
-    output = -(target_distance + enemy_distance)/2
+    output = (target_distance + enemy_distance)/2
 
     return output
 
 
-def tree_build(start_state: FieldState, target):
+def tree_build(start_state: FieldState, target, depth=5):
     start_node = Node(start_state, None)
-    tree_build_recursive(start_node, 1, start_state.matrix, target)
+    tree_build_recursive(start_node, depth, start_state.matrix, target)
     return start_node
 
 
 def tree_build_recursive(current_node: Node, depth, game_map, target):
-    if depth > 5:
+    if depth <= 0:
         current_node.value = evaluate(current_node, target)
         return None
     curr_state = current_node.state
     player_coord = curr_state.get_player_position()
     enemies_coords = curr_state.get_enemies_positions()
-    if depth % 2 == 1:
+    if depth % 2 != 1:
         (current_x, current_y) = player_coord
         neighboring_nodes = list(filter(
             lambda item: item[1](player_coord, game_map),
@@ -76,12 +76,12 @@ def tree_build_recursive(current_node: Node, depth, game_map, target):
             state = curr_state
             for i in range(len(enemies_coords)):
                 state = state.change_character_position(
-                    enemies_coords[i], variant[i], game_map[enemies_coords[i][1]][enemies_coords[i][0]])
+                    enemies_coords[i], variant[i], 0)
 
             new_nodes.append(Node(state, None))
         current_node.children = new_nodes
     for child in current_node.children:
-        tree_build_recursive(child, depth+1, game_map, target)
+        tree_build_recursive(child, depth-1, game_map, target)
 
 
 def get_variations(arr):
