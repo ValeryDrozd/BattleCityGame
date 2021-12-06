@@ -1,6 +1,6 @@
 def read_map():
     game_map: list = []
-    f = open("map.txt", "r")
+    f = open("map3.txt", "r")
     for line in f:
         arr = line.split('\t')
         game_map.append([int(i) for i in arr])

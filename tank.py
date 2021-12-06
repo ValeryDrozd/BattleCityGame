@@ -28,7 +28,7 @@ class Tank(base_class.BaseSprite):
             # self.reload_time = 200
             self.textures = {'left': texturesfile.PLAYER_TANK_LEFT, 'right': texturesfile.PLAYER_TANK_RIGHT,
                              'up': texturesfile.PLAYER_TANK_UP, 'down': texturesfile.PLAYER_TANK_DOWN}
-            self.hp = 3
+            self.hp = 1
 
     def shoot(self):
         new_projectile = projectile.Projectile(x=0, y=0)
@@ -58,12 +58,11 @@ class Tank(base_class.BaseSprite):
     def auto_move(self, game_map, target):
         self.timer_sleep -= 1
 
-        if self.x % constans.SIDE_OF_BOX == 0 and self.y % constans.SIDE_OF_BOX == 0 and self.timer_sleep <= 0:
+        if (self.x % constans.SIDE_OF_BOX == 0 and self.y % constans.SIDE_OF_BOX == 0) and self.timer_sleep <= 0:
             self.timer_sleep = 20
             matrix_position = change_nodes((self.x, self.y))
-
-            self.path = a_star((self.x, self.y), target, game_map)
-            if len(self.path) > 0:
+            self.path = bfs((self.x, self.y), target, game_map)
+            if self.path and len(self.path) > 1:
                 next_position = self.path[0]
                 if matrix_position == next_position:
 
@@ -84,6 +83,12 @@ class Tank(base_class.BaseSprite):
                 self.current_side = new_side
                 self.last_x = self.x
                 self.last_y = self.y
+            else:
+                self.current_side = list(self.move_sides.keys())[
+                    random.randint(0, 3)]
+                self.last_x = self.x
+                self.last_y = self.y
+
         # base_class.BaseSprite.move(self)
 
     def check_path_for_directness(self, path):
@@ -126,7 +131,7 @@ class Tank(base_class.BaseSprite):
         for node in nodes:
             if game_map[node[1]][node[0]] == constans.STEEL_BOX:
                 return False
-        
+
         last_side = self.current_side
         if isHorizontal:
             if matrix_x < enemy_matrix_x:
@@ -138,6 +143,5 @@ class Tank(base_class.BaseSprite):
                 self.current_side = 'down'
             else:
                 self.current_side = 'up'
-        
-        
+
         return last_side
